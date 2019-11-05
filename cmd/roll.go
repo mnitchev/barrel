@@ -10,6 +10,7 @@ import (
 var barrelCmd = &cobra.Command{
 	Use:   "roll",
 	Short: "starts a the specified command in a container",
+	Args:  cobra.MinimumNArgs(1),
 	Run:   rollCommand,
 }
 
