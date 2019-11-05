@@ -1,7 +1,7 @@
 # barrel
 Repository for the garden hell week 🔥
 
-# Bild 
+# Build 
 ```command
 GOOS=linux GOARCH=amd64 go build -o barrel
 ```
