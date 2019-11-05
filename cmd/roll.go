@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/mnitchev/barrel/runner"
@@ -22,7 +23,10 @@ func rollCommand(cmd *cobra.Command, args []string) {
 		Stdout:  os.Stdout,
 		Stderr:  os.Stdout,
 	}
-	if err := runner.Run(container); err != nil {
-		panic(err)
+	exitCode, err := runner.Run(container)
+	if err != nil {
+		fmt.Printf("Running command failed. Error: %s\n", err)
 	}
+
+	os.Exit(exitCode)
 }

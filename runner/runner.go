@@ -17,7 +17,7 @@ type Container struct {
 	Stderr  io.Writer
 }
 
-func Run(container Container) error {
+func Run(container Container) (int, error) {
 	cmd := exec.Command(container.Command, container.Args...)
 	promtEnv := fmt.Sprintf("PS1=%s", promt)
 	cmd.Env = []string{promtEnv}
@@ -29,9 +29,19 @@ func Run(container Container) error {
 	cmd.Stdout = container.Stdout
 	cmd.Stderr = container.Stderr
 
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("Failed to run the command %s with args: %s \n", container.Command, container.Args)
-		return err
+	err := cmd.Run()
+	return parseExitCode(err), err
+}
+
+func parseExitCode(err error) int {
+	if err == nil {
+		return 0
 	}
-	return nil
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+			fmt.Printf("Command exited with non-zero exit code: %d\n", status.ExitStatus())
+			return status.ExitStatus()
+		}
+	}
+	return 1
 }
