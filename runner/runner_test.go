@@ -34,18 +34,19 @@ var _ = Describe("Runner", func() {
 
 	When("the command exits with a non-zero exit code", func(){
 		It("should return the exit code", func(){
-			output := bytes.Buffer{}
+			errOutput := bytes.Buffer{}
 			container := runner.Container{
 				Command: "/bin/sh",
 				Args:    []string{"-c", "nonexistent-command"},
 				Stdin:   os.Stdin,
-				Stdout:  &output,
-				Stderr:  os.Stderr,
+				Stdout:  os.Stdout,
+				Stderr:  &errOutput,
 			}
 
 			exitCode, err := runner.Run(container)
 			Expect(err).To(HaveOccurred())
 			Expect(exitCode).To(Equal(127))
+			Expect(errOutput.String()).To(ContainSubstring("nonexistent-command: not found"))
 		})
 	})
 })
