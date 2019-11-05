@@ -30,6 +30,22 @@ var _ = Describe("Runner", func() {
 			Expect(exitCode).To(Equal(0))
 			Expect(containerUts).NotTo(Equal(parentUts))
 		})
+
+		It("should set the PS1 env variable", func(){
+		output := bytes.Buffer{}
+			container := runner.Container{
+				Command: "env",
+				Args:    []string{},
+				Stdin:   os.Stdin,
+				Stdout:  &output,
+				Stderr:  os.Stderr,
+			}
+
+			exitCode, err := runner.Run(container)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+			Expect(output.String()).To(ContainSubstring("PS1=λ [contained-process] → "))
+		})
 	})
 
 	When("the command exits with a non-zero exit code", func(){
