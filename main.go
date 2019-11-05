@@ -1,15 +1,7 @@
 package main
 
-import (
-	"os"
-
-	"github.com/mnitchev/barrel/runner"
-)
+import "github.com/mnitchev/barrel/cmd"
 
 func main() {
-	command := os.Args[1]
-	arguments := os.Args[2:]
-	if err := runner.Run(command, arguments); err != nil {
-		panic(err)
-	}
+	cmd.Execute()
 }
