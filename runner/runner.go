@@ -23,7 +23,8 @@ func Run(container Container) (int, error) {
 	cmd.Env = []string{promtEnv}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
+		Cloneflags: syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWNS,
 	}
 	cmd.Stdin = container.Stdin
 	cmd.Stdout = container.Stdout
