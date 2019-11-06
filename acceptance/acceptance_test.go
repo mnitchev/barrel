@@ -11,22 +11,23 @@ import (
 
 var _ = Describe("Acceptance", func() {
 	It("should create the process in a new uts namespace", func() {
-		cmdPath, err := gexec.Build("github.com/mnitchev/barrel")
-		Expect(err).ToNot(HaveOccurred())
-
-		cmd := exec.Command(cmdPath, "roll", "bash", "--", "-c", "hostname foo; hostname")
+		cmd := exec.Command(barrelPath, "roll", "--rootfs", rootfsPath, "/bin/bash", "--", "-c", "hostname foo; hostname")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session.Out).Should(gbytes.Say("foo"))
 	})
 
 	It("should exit with the exit code of the container", func() {
-		cmdPath, err := gexec.Build("github.com/mnitchev/barrel")
-		Expect(err).ToNot(HaveOccurred())
-
-		cmd := exec.Command(cmdPath, "roll", "bash", "--", "-c", "exit 12")
+		cmd := exec.Command(barrelPath, "roll", "-r", rootfsPath, "/bin/bash", "--", "-c", "exit 12")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session.ExitCode).Should(Equal(12))
+	})
+
+	It("should fail when the rootfs is not set", func() {
+		cmd := exec.Command(barrelPath, "roll", "bash", "--", "-c", "echo", "this will not run")
+		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(session.ExitCode).Should(Equal(1))
 	})
 })

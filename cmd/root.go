@@ -13,6 +13,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	barrelCmd.Flags().StringP("rootfs", "r", "", "path to rootfs for the contained process")
+	barrelCmd.MarkFlagRequired("rootfs")
 	rootCmd.AddCommand(barrelCmd)
 }
 
