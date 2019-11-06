@@ -2,6 +2,7 @@ package acceptance_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"testing"
 
@@ -23,6 +24,10 @@ func TestAcceptance(t *testing.T) {
 var _ = BeforeSuite(func() {
 	extractRootfs()
 	buildBarrel()
+})
+
+var _ = AfterSuite(func() {
+	Expect(os.RemoveAll(rootfsPath)).To(Succeed())
 })
 
 func buildBarrel() {

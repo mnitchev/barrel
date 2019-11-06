@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/docker/docker/pkg/reexec"
@@ -29,11 +30,49 @@ func init() {
 }
 
 func installNamespaces() {
+	rootfsPath := os.Args[1]
+	procfs := filepath.Join(rootfsPath, "/proc")
+	if err := syscall.Mount("proc", procfs, "proc", 0, ""); err != nil {
+		fmt.Errorf("Failed to chdir: %s", err)
+		panic(err)
+	}
+
+	if err := syscall.Mount(rootfsPath, rootfsPath, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		fmt.Printf("Failed to mount new rootfs at %s: %s", rootfsPath, err)
+		panic(err)
+	}
+
+	oldPath := filepath.Join(rootfsPath, ".oldroot")
+	if err := os.MkdirAll(oldPath, 0700); err != nil {
+		fmt.Errorf("Failed to create directory for old rootfs: %s", err)
+		panic(err)
+	}
+
+	if err := syscall.PivotRoot(rootfsPath, oldPath); err != nil {
+		fmt.Errorf("Failed to pivot root: %s", err)
+		panic(err)
+	}
+
+	if err := os.Chdir("/"); err != nil {
+		fmt.Errorf("Failed to chdir: %s", err)
+		panic(err)
+	}
+
+	if err := syscall.Unmount("/.oldroot", syscall.MNT_DETACH); err != nil {
+		fmt.Errorf("Failed to unmount old rootfs")
+		panic(err)
+	}
+
+	if err := os.RemoveAll("/.oldroot"); err != nil {
+		fmt.Errorf("Failed to remove old rootfs")
+		panic(err)
+	}
+
 	runContainer()
 }
 
 func runContainer() {
-	args := os.Args[1:]
+	args := os.Args[2:]
 	commandPath, err := exec.LookPath(args[0])
 	if err != nil {
 		fmt.Printf("Command %s not found in PATH\n", args[0])
@@ -48,12 +87,13 @@ func runContainer() {
 }
 
 func Run(container Container) (int, error) {
-	args := append([]string{"installNamespaces", container.Command}, container.Args...)
+	args := append([]string{"installNamespaces", container.RootfsPath, container.Command}, container.Args...)
 	cmd := reexec.Command(args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWNS,
+			syscall.CLONE_NEWNS |
+			syscall.CLONE_NEWPID,
 	}
 	cmd.Stdin = container.Stdin
 	cmd.Stdout = container.Stdout
