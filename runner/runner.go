@@ -13,11 +13,12 @@ import (
 const promt = "λ [contained-process] → "
 
 type Container struct {
-	Command string
-	Args    []string
-	Stdin   io.Reader
-	Stdout  io.Writer
-	Stderr  io.Writer
+	Command    string
+	Args       []string
+	Stdin      io.Reader
+	Stdout     io.Writer
+	Stderr     io.Writer
+	RootfsPath string
 }
 
 func init() {

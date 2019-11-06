@@ -16,12 +16,18 @@ var barrelCmd = &cobra.Command{
 }
 
 func rollCommand(cmd *cobra.Command, args []string) {
+	rootfs, err := cmd.Flags().GetString("rootfs")
+	if err != nil {
+		fmt.Errorf("Failed to get rootfs path from flags: %s", err)
+		panic(err)
+	}
 	container := runner.Container{
-		Command: args[0],
-		Args:    args[1:],
-		Stdin:   os.Stdin,
-		Stdout:  os.Stdout,
-		Stderr:  os.Stdout,
+		Command:    args[0],
+		Args:       args[1:],
+		Stdin:      os.Stdin,
+		Stdout:     os.Stdout,
+		Stderr:     os.Stdout,
+		RootfsPath: rootfs,
 	}
 	exitCode, err := runner.Run(container)
 	if err != nil {
