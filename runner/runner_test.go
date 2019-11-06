@@ -23,11 +23,13 @@ var _ = Describe("Runner", func() {
 
 			parentUts, err := os.Readlink("/proc/self/ns/uts")
 			Expect(err).NotTo(HaveOccurred())
-			containerUts := output.String()
 
 			exitCode, err := runner.Run(container)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(0))
+
+			containerUts := output.String()
+			Expect(containerUts).To(MatchRegexp("uts:[[0-9]+]"))
 			Expect(containerUts).NotTo(Equal(parentUts))
 		})
 
