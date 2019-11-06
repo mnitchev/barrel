@@ -2,6 +2,7 @@ package runner_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 
 	"github.com/mnitchev/barrel/runner"
@@ -11,26 +12,32 @@ import (
 
 var _ = Describe("Runner", func() {
 	When("running a command", func() {
-		It("should run it in a new UTS namespace", func() {
+		verifyNamespaceIsCreated := func(ns string) {
 			output := bytes.Buffer{}
+			procPath := fmt.Sprintf("/proc/self/ns/%s", ns)
 			container := runner.Container{
 				Command: "readlink",
-				Args:    []string{"-n", "/proc/self/ns/uts"},
+				Args:    []string{"-n", procPath},
 				Stdin:   os.Stdin,
 				Stdout:  &output,
 				Stderr:  os.Stderr,
 			}
 
-			parentUts, err := os.Readlink("/proc/self/ns/uts")
+			parentNs, err := os.Readlink(procPath)
 			Expect(err).NotTo(HaveOccurred())
 
 			exitCode, err := runner.Run(container)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCode).To(Equal(0))
 
-			containerUts := output.String()
-			Expect(containerUts).To(MatchRegexp("uts:[[0-9]+]"))
-			Expect(containerUts).NotTo(Equal(parentUts))
+			containerNs := output.String()
+			symlincRegex := fmt.Sprintf("%s:[[0-9]+]", ns)
+			Expect(containerNs).To(MatchRegexp(symlincRegex))
+			Expect(containerNs).NotTo(Equal(parentNs))
+
+		}
+		It("should run it in a new UTS namespace", func() {
+			verifyNamespaceIsCreated("uts")
 		})
 
 		It("should run it in a new mount namespace", func() {

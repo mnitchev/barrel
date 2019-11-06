@@ -3,8 +3,11 @@ package runner
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/docker/docker/pkg/reexec"
 )
 
 const promt = "λ [contained-process] → "
@@ -17,10 +20,36 @@ type Container struct {
 	Stderr  io.Writer
 }
 
-func Run(container Container) (int, error) {
-	cmd := exec.Command(container.Command, container.Args...)
+func init() {
+	reexec.Register("installNamespaces", installNamespaces)
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
+
+func installNamespaces() {
+	runContainer()
+}
+
+func runContainer() {
+	command := os.Args[1]
+	args := os.Args[2:]
+	cmd := exec.Command(command, args...)
 	promtEnv := fmt.Sprintf("PS1=%s", promt)
 	cmd.Env = []string{promtEnv}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error running process: %s\n", err)
+		os.Exit(parseExitCode(err))
+	}
+}
+
+func Run(container Container) (int, error) {
+	args := append([]string{"installNamespaces", container.Command}, container.Args...)
+	cmd := reexec.Command(args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS |
