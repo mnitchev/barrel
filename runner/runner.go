@@ -10,7 +10,7 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 )
 
-const promt = "λ [contained-process] → "
+const prompt = "λ [contained-process] → "
 
 type Container struct {
 	Command    string
@@ -33,16 +33,15 @@ func installNamespaces() {
 }
 
 func runContainer() {
-	command := os.Args[1]
-	args := os.Args[2:]
-	cmd := exec.Command(command, args...)
-	promtEnv := fmt.Sprintf("PS1=%s", promt)
-	cmd.Env = []string{promtEnv}
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	args := os.Args[1:]
+	commandPath, err := exec.LookPath(args[0])
+	if err != nil {
+		fmt.Printf("Command %s not found in PATH\n", args[0])
+		os.Exit(127)
+	}
 
-	if err := cmd.Run(); err != nil {
+	env := append(os.Environ(), fmt.Sprintf("PS1=%s", prompt))
+	if err := syscall.Exec(commandPath, args, env); err != nil {
 		fmt.Printf("Error running process: %s\n", err)
 		os.Exit(parseExitCode(err))
 	}

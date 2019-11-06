@@ -41,25 +41,7 @@ var _ = Describe("Runner", func() {
 		})
 
 		It("should run it in a new mount namespace", func() {
-			output := bytes.Buffer{}
-			container := runner.Container{
-				Command: "readlink",
-				Args:    []string{"-n", "/proc/self/ns/mnt"},
-				Stdin:   os.Stdin,
-				Stdout:  &output,
-				Stderr:  os.Stderr,
-			}
-
-			parentMnt, err := os.Readlink("/proc/self/ns/mnt")
-			Expect(err).NotTo(HaveOccurred())
-
-			exitCode, err := runner.Run(container)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(Equal(0))
-
-			containerMnt := output.String()
-			Expect(containerMnt).To(MatchRegexp("mnt:[[0-9]+]"))
-			Expect(containerMnt).NotTo(Equal(parentMnt))
+			verifyNamespaceIsCreated("mnt")
 		})
 
 		It("should set the PS1 env variable", func() {
@@ -84,7 +66,7 @@ var _ = Describe("Runner", func() {
 			errOutput := bytes.Buffer{}
 			container := runner.Container{
 				Command: "/bin/sh",
-				Args:    []string{"-c", "nonexistent-command"},
+				Args:    []string{"-c", "exit 14"},
 				Stdin:   os.Stdin,
 				Stdout:  os.Stdout,
 				Stderr:  &errOutput,
@@ -92,12 +74,11 @@ var _ = Describe("Runner", func() {
 
 			exitCode, err := runner.Run(container)
 			Expect(err).To(HaveOccurred())
-			Expect(exitCode).To(Equal(127))
-			Expect(errOutput.String()).To(ContainSubstring("nonexistent-command: not found"))
+			Expect(exitCode).To(Equal(14))
 		})
 	})
 
-	When("the command cannot be started", func() {
+	When("the command does not exist", func() {
 		It("should exit with exit code 1", func() {
 			container := runner.Container{
 				Command: "non-existent-command",
@@ -109,7 +90,7 @@ var _ = Describe("Runner", func() {
 
 			exitCode, err := runner.Run(container)
 			Expect(err).To(HaveOccurred())
-			Expect(exitCode).To(Equal(1))
+			Expect(exitCode).To(Equal(127))
 		})
 	})
 })
