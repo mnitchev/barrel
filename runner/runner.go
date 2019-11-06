@@ -43,5 +43,6 @@ func parseExitCode(err error) int {
 			return status.ExitStatus()
 		}
 	}
+	fmt.Printf("Command failed to start, %s", err)
 	return 1
 }

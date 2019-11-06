@@ -50,8 +50,8 @@ var _ = Describe("Runner", func() {
 		})
 	})
 
-	When("the command exits with a non-zero exit code", func(){
-		It("should return the exit code", func(){
+	When("the command exits with a non-zero exit code", func() {
+		It("should return the exit code", func() {
 			errOutput := bytes.Buffer{}
 			container := runner.Container{
 				Command: "/bin/sh",
@@ -65,6 +65,22 @@ var _ = Describe("Runner", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(exitCode).To(Equal(127))
 			Expect(errOutput.String()).To(ContainSubstring("nonexistent-command: not found"))
+		})
+	})
+
+	When("the command cannot be started", func() {
+		It("should exit with exit code 1", func() {
+			container := runner.Container{
+				Command: "non-existent-command",
+				Args:    []string{"-c", "echo", "hello"},
+				Stdin:   os.Stdin,
+				Stdout:  os.Stdout,
+				Stderr:  os.Stderr,
+			}
+
+			exitCode, err := runner.Run(container)
+			Expect(err).To(HaveOccurred())
+			Expect(exitCode).To(Equal(1))
 		})
 	})
 })
