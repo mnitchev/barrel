@@ -16,13 +16,13 @@ var pinCmd = &cobra.Command{
 func initPinCommand() {
 	pinCmd.Flags().StringP("cgroup", "c", "", "name of the cgroup")
 	pinCmd.MarkFlagRequired("cgroup")
-	pinCmd.Flags().StringP("cpu-indexes", "i", "", "list of cpu indexes. Example: 1-4,6,7-9")
-	pinCmd.MarkFlagRequired("cpu-indexes")
+	pinCmd.Flags().StringP("cpus", "i", "", "list of cpu indexes. Example: 1-4,6,7-9")
+	pinCmd.MarkFlagRequired("cpus")
 }
 
 func pinCommand(cmd *cobra.Command, args []string) {
 	cgroupName := getStringFlag(cmd, "cgroup")
-	cpuIndexes := getStringFlag(cmd, "cpu-indexes")
+	cpuIndexes := getStringFlag(cmd, "cpus")
 	if err := cgroups.PinCPU(cgroupName, cpuIndexes); err != nil {
 		os.Exit(1)
 	}

@@ -18,7 +18,7 @@ var _ = Describe("Acceptance", func() {
 		It("should create the process in a new uts namespace", func() {
 			cmd := exec.Command(barrelPath, "roll",
 				"--rootfs", rootfsPath,
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"hostname foo; hostname",
@@ -32,7 +32,7 @@ var _ = Describe("Acceptance", func() {
 		It("should exit with the exit code of the container", func() {
 			cmd := exec.Command(barrelPath, "roll",
 				"-r", rootfsPath,
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"exit 12",
@@ -44,7 +44,7 @@ var _ = Describe("Acceptance", func() {
 
 		It("should fail when the rootfs is not set", func() {
 			cmd := exec.Command(barrelPath, "roll",
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"echo",
@@ -57,7 +57,7 @@ var _ = Describe("Acceptance", func() {
 
 		It("should fail when the cgroup name is not set", func() {
 			cmd := exec.Command(barrelPath, "roll",
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"echo",
@@ -71,7 +71,7 @@ var _ = Describe("Acceptance", func() {
 		It("should not be able to list the host's processes", func() {
 			cmd := exec.Command(barrelPath, "roll",
 				"-r", rootfsPath,
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"ps",
@@ -93,7 +93,7 @@ var _ = Describe("Acceptance", func() {
 		It("should set the cpu indexes in cpuset.cpus", func() {
 			rollCmd := exec.Command(barrelPath, "roll",
 				"-r", rootfsPath,
-				"--cgroup-name", "test",
+				"--cgroup", "test",
 				"/bin/sh", "--",
 				"-c",
 				"echo",
@@ -107,7 +107,7 @@ var _ = Describe("Acceptance", func() {
 
 			pinCmd := exec.Command(barrelPath, "pin-cpu",
 				"--cgroup", "test",
-				"--cpu-indexes", "0-1,3",
+				"--cpus", "0-1,3",
 			)
 			pinSession, err := gexec.Start(pinCmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
