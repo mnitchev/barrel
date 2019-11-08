@@ -15,6 +15,8 @@ var rootCmd = &cobra.Command{
 func init() {
 	barrelCmd.Flags().StringP("rootfs", "r", "", "path to rootfs for the contained process")
 	barrelCmd.MarkFlagRequired("rootfs")
+	barrelCmd.Flags().StringP("cgroup-name", "c", "", "name of the cgroup to add the taskt to. will create a new one if missing")
+	barrelCmd.MarkFlagRequired("cgroup-name")
 	rootCmd.AddCommand(barrelCmd)
 }
 

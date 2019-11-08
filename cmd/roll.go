@@ -16,11 +16,9 @@ var barrelCmd = &cobra.Command{
 }
 
 func rollCommand(cmd *cobra.Command, args []string) {
-	rootfs, err := cmd.Flags().GetString("rootfs")
-	if err != nil {
-		fmt.Errorf("Failed to get rootfs path from flags: %s", err)
-		panic(err)
-	}
+	rootfs := getStringFlag(cmd, "rootfs")
+	cgroupName := getStringFlag(cmd, "cgroup-name")
+
 	container := runner.Container{
 		Command:    args[0],
 		Args:       args[1:],
@@ -28,6 +26,7 @@ func rollCommand(cmd *cobra.Command, args []string) {
 		Stdout:     os.Stdout,
 		Stderr:     os.Stdout,
 		RootfsPath: rootfs,
+		CgroupName: cgroupName,
 	}
 	exitCode, err := runner.Run(container)
 	if err != nil {
@@ -35,4 +34,14 @@ func rollCommand(cmd *cobra.Command, args []string) {
 	}
 
 	os.Exit(exitCode)
+}
+
+func getStringFlag(cmd *cobra.Command, flagName string) string {
+	flagValue, err := cmd.Flags().GetString(flagName)
+	if err != nil {
+		fmt.Errorf("Failed to get flat %s: %s", flagName, err)
+		panic(err)
+	}
+
+	return flagValue
 }

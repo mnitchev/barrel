@@ -20,6 +20,7 @@ type Container struct {
 	Stdout     io.Writer
 	Stderr     io.Writer
 	RootfsPath string
+	CgroupName string
 }
 
 func init() {

@@ -11,8 +11,9 @@ import (
 )
 
 var _ = Describe("Acceptance", func() {
+
 	It("should create the process in a new uts namespace", func() {
-		cmd := exec.Command(barrelPath, "roll", "--rootfs", rootfsPath, "/bin/sh", "--", "-c", "hostname foo; hostname")
+		cmd := exec.Command(barrelPath, "roll", "--rootfs", rootfsPath, "--cgroup-name", "test", "/bin/sh", "--", "-c", "hostname foo; hostname")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session.ExitCode).Should(Equal(0))
@@ -20,21 +21,28 @@ var _ = Describe("Acceptance", func() {
 	})
 
 	It("should exit with the exit code of the container", func() {
-		cmd := exec.Command(barrelPath, "roll", "-r", rootfsPath, "/bin/sh", "--", "-c", "exit 12")
+		cmd := exec.Command(barrelPath, "roll", "-r", rootfsPath, "--cgroup-name", "test", "/bin/sh", "--", "-c", "exit 12")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session.ExitCode).Should(Equal(12))
 	})
 
 	It("should fail when the rootfs is not set", func() {
-		cmd := exec.Command(barrelPath, "roll", "/bin/sh", "--", "-c", "echo", "this will not run")
+		cmd := exec.Command(barrelPath, "roll", "/bin/sh", "--cgroup-name", "test", "--", "-c", "echo", "this will not run")
+		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(session.ExitCode).Should(Equal(1))
+	})
+
+	It("should fail when the cgroup name is not set", func() {
+		cmd := exec.Command(barrelPath, "roll", "/bin/sh", "--cgroup-name", "test", "--", "-c", "echo", "this will not run")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session.ExitCode).Should(Equal(1))
 	})
 
 	It("should not be able to list the host's processes", func() {
-		cmd := exec.Command(barrelPath, "roll", "-r", rootfsPath, "/bin/sh", "--", "-c", "ps", "aux")
+		cmd := exec.Command(barrelPath, "roll", "-r", rootfsPath, "--cgroup-name", "test", "/bin/sh", "--", "-c", "ps", "aux")
 		session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 
