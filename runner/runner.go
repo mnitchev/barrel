@@ -3,9 +3,11 @@ package runner
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/docker/docker/pkg/reexec"
@@ -32,48 +34,16 @@ func init() {
 
 func installNamespaces() {
 	rootfsPath := os.Args[1]
-	procfs := filepath.Join(rootfsPath, "/proc")
-	if err := syscall.Mount("proc", procfs, "proc", 0, ""); err != nil {
-		fmt.Errorf("Failed to chdir: %s", err)
-		panic(err)
-	}
+	cgroupName := os.Args[2]
 
-	if err := syscall.Mount(rootfsPath, rootfsPath, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		fmt.Printf("Failed to mount new rootfs at %s: %s", rootfsPath, err)
-		panic(err)
-	}
-
-	oldPath := filepath.Join(rootfsPath, ".oldroot")
-	if err := os.MkdirAll(oldPath, 0700); err != nil {
-		fmt.Errorf("Failed to create directory for old rootfs: %s", err)
-		panic(err)
-	}
-
-	if err := syscall.PivotRoot(rootfsPath, oldPath); err != nil {
-		fmt.Errorf("Failed to pivot root: %s", err)
-		panic(err)
-	}
-
-	if err := os.Chdir("/"); err != nil {
-		fmt.Errorf("Failed to chdir: %s", err)
-		panic(err)
-	}
-
-	if err := syscall.Unmount("/.oldroot", syscall.MNT_DETACH); err != nil {
-		fmt.Errorf("Failed to unmount old rootfs")
-		panic(err)
-	}
-
-	if err := os.RemoveAll("/.oldroot"); err != nil {
-		fmt.Errorf("Failed to remove old rootfs")
-		panic(err)
-	}
-
+	setUpCgroups(cgroupName)
+	mountProcfs(rootfsPath)
+	mountRootfs(rootfsPath)
 	runContainer()
 }
 
 func runContainer() {
-	args := os.Args[2:]
+	args := os.Args[3:]
 	commandPath, err := exec.LookPath(args[0])
 	if err != nil {
 		fmt.Printf("Command %s not found in PATH\n", args[0])
@@ -88,7 +58,7 @@ func runContainer() {
 }
 
 func Run(container Container) (int, error) {
-	args := append([]string{"installNamespaces", container.RootfsPath, container.Command}, container.Args...)
+	args := append([]string{"installNamespaces", container.RootfsPath, container.CgroupName, container.Command}, container.Args...)
 	cmd := reexec.Command(args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -102,6 +72,78 @@ func Run(container Container) (int, error) {
 
 	err := cmd.Run()
 	return parseExitCode(err), err
+}
+
+func mountProcfs(rootfsPath string) {
+	procfs := filepath.Join(rootfsPath, "/proc")
+	if err := syscall.Mount("proc", procfs, "proc", 0, ""); err != nil {
+		fmt.Printf("Failed to chdir: %s", err)
+		panic(err)
+	}
+}
+
+func setUpCgroups(cgroupName string) {
+	cpusetCgroup := "/sys/fs/cgroup/cpuset/"
+	cgroupPath := filepath.Join(cpusetCgroup, cgroupName)
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		fmt.Printf("Failed to create new cpuset cgroup %s: %s", cgroupName, err)
+		panic(err)
+	}
+
+	copyFile(filepath.Join(cpusetCgroup, "cpuset.mems"), filepath.Join(cgroupPath, "cpuset.mems"))
+	copyFile(filepath.Join(cpusetCgroup, "cpuset.cpus"), filepath.Join(cgroupPath, "cpuset.cpus"))
+
+	pid := os.Getpid()
+	if err := ioutil.WriteFile(filepath.Join(cgroupPath, "tasks"), []byte(strconv.Itoa(pid)), 0644); err != nil {
+		fmt.Printf("Failed to set pid %d in cgroup tasks file: %s", pid, err)
+		panic(err)
+	}
+}
+
+func mountRootfs(rootfsPath string) {
+	if err := syscall.Mount(rootfsPath, rootfsPath, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+		fmt.Printf("Failed to mount new rootfs at %s: %s", rootfsPath, err)
+		panic(err)
+	}
+
+	oldPath := filepath.Join(rootfsPath, ".oldroot")
+	if err := os.MkdirAll(oldPath, 0700); err != nil {
+		fmt.Printf("Failed to create directory for old rootfs: %s", err)
+		panic(err)
+	}
+
+	if err := syscall.PivotRoot(rootfsPath, oldPath); err != nil {
+		fmt.Printf("Failed to pivot root: %s", err)
+		panic(err)
+	}
+
+	if err := os.Chdir("/"); err != nil {
+		fmt.Printf("Failed to chdir: %s", err)
+		panic(err)
+	}
+
+	if err := syscall.Unmount("/.oldroot", syscall.MNT_DETACH); err != nil {
+		fmt.Printf("Failed to unmount old rootfs")
+		panic(err)
+	}
+
+	if err := os.RemoveAll("/.oldroot"); err != nil {
+		fmt.Printf("Failed to remove old rootfs")
+		panic(err)
+	}
+}
+
+func copyFile(source, target string) {
+	contents, err := ioutil.ReadFile(source)
+	if err != nil {
+		fmt.Printf("Failed to open cpuset.mems file of parent cgroup: %s", err)
+		panic(err)
+	}
+
+	if err := ioutil.WriteFile(target, contents, 0644); err != nil {
+		fmt.Printf("Failed to write file %s : %s", target, err)
+		panic(err)
+	}
 }
 
 func parseExitCode(err error) int {

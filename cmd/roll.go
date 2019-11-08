@@ -15,6 +15,13 @@ var barrelCmd = &cobra.Command{
 	Run:   rollCommand,
 }
 
+func initRollCommand(){
+	barrelCmd.Flags().StringP("rootfs", "r", "", "path to rootfs for the contained process")
+	barrelCmd.MarkFlagRequired("rootfs")
+	barrelCmd.Flags().StringP("cgroup-name", "c", "", "name of the cgroup to add the taskt to. will create a new one if missing")
+	barrelCmd.MarkFlagRequired("cgroup-name")
+
+}
 func rollCommand(cmd *cobra.Command, args []string) {
 	rootfs := getStringFlag(cmd, "rootfs")
 	cgroupName := getStringFlag(cmd, "cgroup-name")
