@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -117,6 +118,42 @@ var _ = Describe("Acceptance", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(contents).To(Equal("0-1,3"))
+		})
+	})
+	When("setting a memory limit", func() {
+		verifyCgroupFileContets := func(file, expectedContents string) {
+			path := filepath.Join("/sys/fs/cgroup/memory/test/", file)
+			rawContents, err := ioutil.ReadFile(path)
+			actualContents := strings.Trim(string(rawContents), "\n")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(actualContents).To(Equal(expectedContents))
+
+		}
+		It("shoud set the memory limit", func() {
+			rollCmd := exec.Command(barrelPath, "roll",
+				"-r", rootfsPath,
+				"--cgroup", "test",
+				"/bin/sh", "--",
+				"-c",
+				"echo",
+				"pinning cpus",
+			)
+			rollSession, err := gexec.Start(rollCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(rollSession.ExitCode).Should(Equal(0))
+			_, err = os.Stat("/sys/fs/cgroup/memory/test/")
+			Expect(err).ToNot(HaveOccurred())
+
+			pinCmd := exec.Command(barrelPath, "limit-memory",
+				"--cgroup", "test",
+				"--max", "1500M",
+			)
+			pinSession, err := gexec.Start(pinCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(pinSession.ExitCode).Should(Equal(0))
+			verifyCgroupFileContets("memory.limit_in_bytes", "1572864000")
+			verifyCgroupFileContets("memory.memsw.limit_in_bytes", "1574961152")
 		})
 	})
 })

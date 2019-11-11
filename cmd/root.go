@@ -15,8 +15,10 @@ var rootCmd = &cobra.Command{
 func init() {
 	initRollCommand()
 	initPinCommand()
+	initLimitMemoryCommand()
 	rootCmd.AddCommand(barrelCmd)
 	rootCmd.AddCommand(pinCmd)
+	rootCmd.AddCommand(limitMemoryCmd)
 }
 
 func Execute() {

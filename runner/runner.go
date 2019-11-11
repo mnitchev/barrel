@@ -83,6 +83,25 @@ func mountProcfs(rootfsPath string) {
 }
 
 func setUpCgroups(cgroupName string) {
+	setUpCpusetCgroup(cgroupName)
+	setUpMemoryCgroup(cgroupName)
+}
+
+func setUpMemoryCgroup(cgroupName string) {
+	memoryCgroup := "/sys/fs/cgroup/memory/"
+	cgroupPath := filepath.Join(memoryCgroup, cgroupName)
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		fmt.Printf("Failed to create new memory cgroup %s: %s", cgroupName, err)
+		panic(err)
+	}
+	pid := os.Getpid()
+	if err := ioutil.WriteFile(filepath.Join(cgroupPath, "tasks"), []byte(strconv.Itoa(pid)), 0644); err != nil {
+		fmt.Printf("Failed to set pid %d in cgroup tasks file: %s", pid, err)
+		panic(err)
+	}
+}
+
+func setUpCpusetCgroup(cgroupName string) {
 	cpusetCgroup := "/sys/fs/cgroup/cpuset/"
 	cgroupPath := filepath.Join(cpusetCgroup, cgroupName)
 	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
