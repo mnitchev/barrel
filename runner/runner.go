@@ -120,19 +120,37 @@ func setUpCpusetCgroup(cgroupName string) {
 }
 
 func mountRootfs(rootfsPath string) {
-	if err := syscall.Mount(rootfsPath, rootfsPath, "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		fmt.Printf("Failed to mount new rootfs at %s: %s", rootfsPath, err)
+	ns, _ := os.Readlink("/proc/self/ns/mnt")
+	fmt.Printf("Mount namespace: %s\n", ns)
+	upperDir := "/barrel/upper"
+	if err := os.MkdirAll(upperDir, 0755); err != nil {
+		fmt.Printf("Failed to create temp dir at %s: %s", upperDir, err)
+		panic(err)
+	}
+	workDir := "/barrel/work"
+	if err := os.MkdirAll(workDir, 0755); err != nil {
+		fmt.Printf("Failed to create temp dir at %s: %s", workDir, err)
+		panic(err)
+	}
+	mergedDir := "/barrel/merged"
+	if err := os.MkdirAll(mergedDir, 0755); err != nil {
+		fmt.Printf("Failed to create temp dir at %s: %s", mergedDir, err)
+		panic(err)
+	}
+	data := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", rootfsPath, upperDir, workDir)
+	if err := syscall.Mount("overlay", mergedDir, "overlay", 0, data); err != nil {
+		fmt.Printf("Failed to mount new rootfs at %s: %s\n", mergedDir, err)
 		panic(err)
 	}
 
-	oldPath := filepath.Join(rootfsPath, ".oldroot")
-	if err := os.MkdirAll(oldPath, 0700); err != nil {
+	oldPath := filepath.Join(mergedDir, ".oldroot")
+	if err := os.MkdirAll(oldPath, 0755); err != nil {
 		fmt.Printf("Failed to create directory for old rootfs: %s", err)
 		panic(err)
 	}
 
-	if err := syscall.PivotRoot(rootfsPath, oldPath); err != nil {
-		fmt.Printf("Failed to pivot root: %s", err)
+	if err := syscall.PivotRoot(mergedDir, oldPath); err != nil {
+		fmt.Printf("Failed to pivot root at %s: %s\n", mergedDir, err)
 		panic(err)
 	}
 
